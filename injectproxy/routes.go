@@ -302,6 +302,14 @@ func NewRoutes(upstream *url.URL, label string, extractLabeler ExtractLabeler, o
 
 	proxy := httputil.NewSingleHostReverseProxy(upstream)
 
+	// Add origin host to proxy request
+	proxy.Director = func(req *http.Request) {
+		// Set the Host header
+		req.Host = upstream.Host
+		req.URL.Scheme = upstream.Scheme
+		req.URL.Host = upstream.Host
+	}
+
 	r := &routes{
 		upstream:              upstream,
 		handler:               proxy,
