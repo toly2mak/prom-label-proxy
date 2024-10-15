@@ -11,3 +11,16 @@ curl -v -G 'https://prometheus-monitoring.eu-central-1-0.aws.staging-cloud.qdran
 # Proxy entrypoint
 curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/api/v1/query' \
     --data-urlencode 'query=container_memory_rss' 
+
+curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/federate'
+
+curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/api/v1/series'
+
+curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/api/v1/labels'
+
+curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/api/v1/label/__name__/values'
+
+curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/api/v1/label/pod/values'
+
+curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/healthz'
+
