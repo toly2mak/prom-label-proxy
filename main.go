@@ -69,6 +69,7 @@ func main() {
 		headerUsesListSyntax   bool
 		rulesWithActiveAlerts  bool
 		onlyMetrics            bool
+		valueRegexp            string
 	)
 
 	flagset := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
@@ -90,6 +91,7 @@ func main() {
 	flagset.BoolVar(&headerUsesListSyntax, "header-uses-list-syntax", false, "When specified, the header line value will be parsed as a comma-separated list. This allows a single tenant header line to specify multiple tenant names.")
 	flagset.BoolVar(&rulesWithActiveAlerts, "rules-with-active-alerts", false, "When true, the proxy will return alerting rules with active alerts matching the tenant label even when the tenant label isn't present in the rule's labels.")
 	flagset.BoolVar(&onlyMetrics, "only-metrics", true, "When true, the proxy will serve only metrics endpoint.")
+	flagset.StringVar(&valueRegexp, "value-regexp", "", "Regexp to extract label's value from requests.")
 
 	//nolint: errcheck // Parse() will exit on error.
 	flagset.Parse(os.Args[1:])
@@ -171,9 +173,10 @@ func main() {
 	case len(labelValues) > 0:
 		extractLabeler = injectproxy.StaticLabelEnforcer(labelValues)
 	case queryParam != "":
-		extractLabeler = injectproxy.HTTPFormEnforcer{ParameterName: queryParam}
+		extractLabeler = injectproxy.HTTPFormEnforcer{ParameterName: queryParam, ValueRegexp: valueRegexp}
 	case headerName != "":
-		extractLabeler = injectproxy.HTTPHeaderEnforcer{Name: http.CanonicalHeaderKey(headerName), ParseListSyntax: headerUsesListSyntax}
+		extractLabeler = injectproxy.HTTPHeaderEnforcer{Name: http.CanonicalHeaderKey(headerName),
+			ParseListSyntax: headerUsesListSyntax, ValueRegexp: valueRegexp}
 	}
 
 	var g run.Group

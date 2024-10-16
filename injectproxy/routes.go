@@ -203,6 +203,7 @@ type ExtractLabeler interface {
 // HTTPFormEnforcer enforces a label value extracted from the HTTP form and query parameters.
 type HTTPFormEnforcer struct {
 	ParameterName string
+	ValueRegexp   string
 }
 
 // ExtractLabel implements the ExtractLabeler interface.
@@ -246,6 +247,11 @@ func (hff HTTPFormEnforcer) getLabelValues(r *http.Request) ([]string, error) {
 	}
 
 	formValues := removeEmptyValues(r.Form[hff.ParameterName])
+
+	if hff.ValueRegexp != "" {
+		formValues = parseValues(formValues, hff.ValueRegexp)
+	}
+
 	if len(formValues) == 0 {
 		return nil, fmt.Errorf("the %q query parameter must be provided", hff.ParameterName)
 	}
@@ -257,6 +263,7 @@ func (hff HTTPFormEnforcer) getLabelValues(r *http.Request) ([]string, error) {
 type HTTPHeaderEnforcer struct {
 	Name            string
 	ParseListSyntax bool
+	ValueRegexp     string
 }
 
 // ExtractLabel implements the ExtractLabeler interface.
@@ -280,6 +287,10 @@ func (hhe HTTPHeaderEnforcer) getLabelValues(r *http.Request) ([]string, error) 
 	}
 
 	headerValues = removeEmptyValues(headerValues)
+
+	if hhe.ValueRegexp != "" {
+		headerValues = parseValues(headerValues, hhe.ValueRegexp)
+	}
 
 	if len(headerValues) == 0 {
 		return nil, fmt.Errorf("missing HTTP header %q", hhe.Name)
@@ -755,6 +766,27 @@ func splitValues(slice []string, sep string) []string {
 	}
 
 	return slice
+}
+
+func parseValues(slice []string, pattern string) []string {
+
+	result := []string{}
+
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return result
+	}
+
+	for i := 0; i < len(slice); i++ {
+
+		matches := re.FindStringSubmatch(slice[i])
+		if len(matches) > 1 {
+			result = append(result, matches[1])
+
+		}
+	}
+
+	return result
 }
 
 func removeEmptyValues(slice []string) []string {

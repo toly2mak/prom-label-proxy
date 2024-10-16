@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -156,6 +157,28 @@ func (m *mockUpstream) Close() {
 }
 
 const proxyLabel = "namespace"
+
+func TestParseValues(t *testing.T) {
+
+	tests := []struct {
+		url      []string
+		pattern  string
+		expected []string
+	}{
+		{[]string{"node-1.us.west.com"}, `^([a-zA-Z0-9-]+)`, []string{"node-1"}},
+		{[]string{"service-2.east.org"}, `^([a-zA-Z0-9-]+)`, []string{"service-2"}},
+		{[]string{"example.com"}, `^([a-zA-Z0-9-]+)`, []string{"example"}},
+		{[]string{"node-1.us.west.com"}, `^node-(\d+)`, []string{"1"}},
+	}
+
+	for _, test := range tests {
+		result := parseValues(test.url, test.pattern)
+		if !reflect.DeepEqual(result, test.expected) {
+			t.Errorf("For URL %q and pattern %q, expected %q but got %q", test.url, test.pattern, test.expected, result)
+		}
+	}
+
+}
 
 func TestWithPassthroughPaths(t *testing.T) {
 	m := newMockUpstream(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) { w.Write(okResponse) }))
