@@ -14,13 +14,13 @@ curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/api/v1/query' \
 
 curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/federate'
 
-curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/api/v1/series'
+# curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/api/v1/series'
 
-curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/api/v1/labels'
+# curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/api/v1/labels'
 
-curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/api/v1/label/__name__/values'
+# curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/api/v1/label/__name__/values'
 
-curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/api/v1/label/pod/values'
+# curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/api/v1/label/pod/values'
 
-curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/healthz'
+# curl -v -H 'Pod: qdrant-'${DBID}'.+' -G 'http://127.0.0.1:8080/healthz'
 

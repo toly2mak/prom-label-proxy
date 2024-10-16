@@ -38,8 +38,6 @@ PRE_GO_111        ?= $(shell echo $(GO_VERSION_NUMBER) | grep -E 'go1\.(10|[0-9]
 
 PROMU        := $(FIRST_GOPATH)/bin/promu
 pkgs          = ./...
-pkgs_skip 	  = 'TestGetAlerts|TestGetAlertGroups|TestUpdateSilence|TestListSilences|TestDeleteSilence|TestAlerts|TestRules|TestWithPassthroughPaths'
-
 
 ifeq (arm, $(GOHOSTARCH))
 	GOHOSTARM ?= $(shell GOARM= $(GO) env GOARM)
@@ -48,7 +46,7 @@ else
 	GO_BUILD_PLATFORM ?= $(GOHOSTOS)-$(GOHOSTARCH)
 endif
 
-GOTEST := $(GO) test -skip $(pkgs_skip)
+GOTEST := $(GO) test
 GOTEST_DIR :=
 ifneq ($(CIRCLE_JOB),)
 ifneq ($(shell command -v gotestsum 2> /dev/null),)

@@ -326,8 +326,8 @@ func NewRoutes(upstream *url.URL, label string, extractLabeler ExtractLabeler, o
 		mux.Handle("/federate", r.el.ExtractLabel(enforceMethods(r.matcher, "GET"))),
 		mux.Handle("/api/v1/query", r.el.ExtractLabel(enforceMethods(r.query, "GET", "POST"))),
 		mux.Handle("/api/v1/query_range", r.el.ExtractLabel(enforceMethods(r.query, "GET", "POST"))),
-		//mux.Handle("/api/v1/alerts", r.el.ExtractLabel(enforceMethods(r.passthrough, "GET"))),
-		//mux.Handle("/api/v1/rules", r.el.ExtractLabel(enforceMethods(r.passthrough, "GET"))),
+		mux.Handle("/api/v1/alerts", r.el.ExtractLabel(enforceMethods(r.passthrough, "GET"))),
+		mux.Handle("/api/v1/rules", r.el.ExtractLabel(enforceMethods(r.passthrough, "GET"))),
 		mux.Handle("/api/v1/series", r.el.ExtractLabel(enforceMethods(r.matcher, "GET", "POST"))),
 		mux.Handle("/api/v1/query_exemplars", r.el.ExtractLabel(enforceMethods(r.query, "GET", "POST"))),
 	)
@@ -341,28 +341,28 @@ func NewRoutes(upstream *url.URL, label string, extractLabeler ExtractLabeler, o
 		)
 	}
 
-	//errs.Add(
-	// Reject multi label values with assertSingleLabelValue() because the
-	// semantics of the Silences API don't support multi-label matchers.
-	//mux.Handle("/api/v2/silences", r.el.ExtractLabel(
-	// 	r.errorIfRegexpMatch(
-	// 		enforceMethods(
-	// 			assertSingleLabelValue(r.silences),
-	// 			"GET", "POST",
-	// 		),
-	// 	),
-	// )),
-	// mux.Handle("/api/v2/silence/", r.el.ExtractLabel(
-	// 	r.errorIfRegexpMatch(
-	// 		enforceMethods(
-	// 			assertSingleLabelValue(r.deleteSilence),
-	// 			"DELETE",
-	// 		),
-	// 	),
-	// )),
-	//mux.Handle("/api/v2/alerts/groups", r.el.ExtractLabel(enforceMethods(r.enforceFilterParameter, "GET"))),
-	//mux.Handle("/api/v2/alerts", r.el.ExtractLabel(enforceMethods(r.alerts, "GET"))),
-	//)
+	errs.Add(
+		// Reject multi label values with assertSingleLabelValue() because the
+		// semantics of the Silences API don't support multi-label matchers.
+		mux.Handle("/api/v2/silences", r.el.ExtractLabel(
+			r.errorIfRegexpMatch(
+				enforceMethods(
+					assertSingleLabelValue(r.silences),
+					"GET", "POST",
+				),
+			),
+		)),
+		mux.Handle("/api/v2/silence/", r.el.ExtractLabel(
+			r.errorIfRegexpMatch(
+				enforceMethods(
+					assertSingleLabelValue(r.deleteSilence),
+					"DELETE",
+				),
+			),
+		)),
+		mux.Handle("/api/v2/alerts/groups", r.el.ExtractLabel(enforceMethods(r.enforceFilterParameter, "GET"))),
+		mux.Handle("/api/v2/alerts", r.el.ExtractLabel(enforceMethods(r.alerts, "GET"))),
+	)
 
 	errs.Add(
 		mux.Handle("/healthz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
