@@ -17,4 +17,4 @@ curl -v -H 'X-Forwarded-Host: '${FW_HOST_VALUE} -G 'http://127.0.0.1:8080/sys_me
 
 # curl -v -H 'X-Forwarded-Host: '${FW_HOST_VALUE} -G 'http://127.0.0.1:8080/api/v1/label/pod/values'
 
-curl -v -H 'X-Forwarded-Host: '${FW_HOST_VALUE} -G 'http://127.0.0.1:8080/healthz'
+# curl -v -H 'X-Forwarded-Host: '${FW_HOST_VALUE} -G 'http://127.0.0.1:8080/healthz'

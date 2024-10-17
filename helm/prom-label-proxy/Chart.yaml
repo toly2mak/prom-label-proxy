@@ -1,0 +1,14 @@
+apiVersion: v2
+name: prom-label-proxy
+description: A proxy that enforces a given label in a given PromQL query.
+type: application
+version: 0.10.0
+appVersion: "v0.11.0"
+home: "https://github.com/qdrant/prom-label-proxy.git"
+keywords:
+  - metric
+  - monitoring
+  - prometheus
+maintainers:
+  - name: toly2mak
+    email: toly.makarov@qdrant.com
