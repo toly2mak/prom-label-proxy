@@ -1,0 +1,33 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  labels:
+    app: qdrant
+    cluster-id: 7a5e7bcc-4a03-4210-b613-74dde2c57c81
+    customer-id: e62b9974-d720-4ae3-bb62-e1b11cc11606
+  name: prometheus-qdrant-7a5e7bcc-4a03-4210-b613-74dde2c57c81
+  namespace: kube-system
+spec:
+  entryPoints:
+  - websecure
+  routes:
+  - kind: Rule
+    match: Headers(`X-Forwarded-Host`, `7a5e7bcc-4a03-4210-b613-74dde2c57c81.europe-west3-0.gcp.staging-cloud.qdrant.io`) && Path(`/sys_metrics`)
+    middlewares:
+    - name: auth
+      namespace: kube-system
+    services:
+    - name: prom-label-proxy
+      namespace: monitoring
+      port: 8080
+  - kind: Rule
+    match: Headers(`host`, `7a5e7bcc-4a03-4210-b613-74dde2c57c81.europe-west3-0.gcp.staging-cloud.qdrant.io`) && Path(`/sys_metrics`)
+    middlewares:
+    - name: auth
+      namespace: kube-system
+    services:
+    - name: prom-label-proxy
+      namespace: monitoring
+      port: 8080
+  tls:
+    secretName: europe-west3-0-wildcard-cert
