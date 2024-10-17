@@ -108,6 +108,7 @@ func main() {
 		onlyMetrics            bool
 		valueRegexp            string
 		resultFString          string
+		rewriteMetricsPath     string
 	)
 
 	flagset := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
@@ -131,6 +132,7 @@ func main() {
 	flagset.BoolVar(&onlyMetrics, "only-metrics", true, "When true, the proxy will serve only metrics endpoint.")
 	flagset.StringVar(&valueRegexp, "value-regexp", "", "Regexp to extract label's value from requests.")
 	flagset.StringVar(&resultFString, "result-fstring", "", "Format string to wrap label's value to inject.")
+	flagset.StringVar(&rewriteMetricsPath, "rewrite-metrics-path", "", "Rewrite /metrics path to custom endpoint.")
 
 	initLogger()
 
@@ -187,6 +189,8 @@ func main() {
 	if onlyMetrics {
 		opts = append(opts, injectproxy.WithOnlyMetrics())
 	}
+
+	opts = append(opts, injectproxy.WithRewriteMetricsPath(rewriteMetricsPath))
 
 	if regexMatch {
 		if len(labelValues) > 0 {

@@ -9,4 +9,6 @@ LOGLEVEL=DEBUG ./prom-label-proxy \
    -value-regexp '^([a-zA-Z0-9-]+)' \
    -result-fstring 'qdrant-%s.+' \
    -upstream https://prometheus-monitoring.eu-central-1-0.aws.staging-cloud.qdrant.io \
+   -rewrite-metrics-path '/sys_metrics' \
+   -only-metrics=false \
    -insecure-listen-address 127.0.0.1:8080

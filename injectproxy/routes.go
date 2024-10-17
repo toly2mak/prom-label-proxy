@@ -63,6 +63,7 @@ type options struct {
 	regexMatch            bool
 	rulesWithActiveAlerts bool
 	onlyMetrics           bool
+	rewriteMetricsPath    string
 }
 
 type Option interface {
@@ -86,6 +87,12 @@ func WithPrometheusRegistry(reg prometheus.Registerer) Option {
 func WithEnabledLabelsAPI() Option {
 	return optionFunc(func(o *options) {
 		o.enableLabelAPIs = true
+	})
+}
+
+func WithRewriteMetricsPath(path string) Option {
+	return optionFunc(func(o *options) {
+		o.rewriteMetricsPath = path
 	})
 }
 
@@ -336,6 +343,11 @@ func NewRoutes(upstream *url.URL, label string, extractLabeler ExtractLabeler, o
 		req.Host = upstream.Host
 		req.URL.Scheme = upstream.Scheme
 		req.URL.Host = upstream.Host
+
+		// Set proxy path back to federate
+		if opt.rewriteMetricsPath != "" && opt.rewriteMetricsPath == req.URL.Path {
+			req.URL.Path = "/federate"
+		}
 	}
 
 	r := &routes{
@@ -350,13 +362,23 @@ func NewRoutes(upstream *url.URL, label string, extractLabeler ExtractLabeler, o
 	}
 	mux := newStrictMux(newInstrumentedMux(http.NewServeMux(), opt.registerer))
 
+	mpath := "/metrics"
+	if opt.rewriteMetricsPath != "" {
+		mpath = opt.rewriteMetricsPath
+	}
+
+	slog.Debug("Expose API", "path for metrics", mpath)
+
 	errs := merrors.New(
-		mux.Handle("/federate", r.el.ExtractLabel(enforceMethods(r.matcher, "GET"))),
+		mux.Handle(mpath, r.el.ExtractLabel(enforceMethods(r.matcher, "GET"))),
 	)
+
+	slog.Info("Expose API", "onlyMetrics", opt.onlyMetrics)
 
 	// if onlyMetrics is set to false then expose other APIs
 	if !opt.onlyMetrics {
 		errs.Add(
+			mux.Handle("/federate", r.el.ExtractLabel(enforceMethods(r.matcher, "GET"))),
 			mux.Handle("/api/v1/query", r.el.ExtractLabel(enforceMethods(r.query, "GET", "POST"))),
 			mux.Handle("/api/v1/query_range", r.el.ExtractLabel(enforceMethods(r.query, "GET", "POST"))),
 			mux.Handle("/api/v1/alerts", r.el.ExtractLabel(enforceMethods(r.passthrough, "GET"))),
@@ -700,12 +722,18 @@ func (r *routes) matcher(w http.ResponseWriter, req *http.Request) {
 	}
 
 	q := req.URL.Query()
+
+	slog.Debug("matcher request path", "path", req.URL.Path)
+	slog.Debug("matcher request query", "q", q)
+
 	if err := injectMatcher(q, matcher); err != nil {
 		prometheusAPIError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	req.URL.RawQuery = q.Encode()
+	slog.Debug("matcher request RawQuery", "q", req.URL.RawQuery)
+
 	if req.Method == http.MethodPost {
 		if err := req.ParseForm(); err != nil {
 			return
