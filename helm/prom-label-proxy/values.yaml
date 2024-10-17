@@ -19,7 +19,7 @@ imagePullSecrets:
 nameOverride: ""
 
 # -- Override the namespace
-namespaceOverride: "kube-system"
+namespaceOverride: "monitoring"
 
 # -- String to fully override amazon-eks-pod-identity.fullname template
 fullnameOverride: ""
