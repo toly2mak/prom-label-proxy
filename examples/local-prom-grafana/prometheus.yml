@@ -1,0 +1,14 @@
+# Global configuration
+global:
+  scrape_interval: 15s  # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s  # Evaluate rules every 15 seconds. The default is every 1 minute.
+  # scrape_timeout is set to the global default (10s).
+
+# Scrape configurations
+scrape_configs:
+  # Scrape application metrics
+  - job_name: "qdrant-7a5e7bcc-4a03-4210-b613-74dde2c57c81"
+    metrics_path: "/sys_metrics"  # Your application metrics endpoint
+    static_configs:
+      - targets: 
+        - "qdrant:6333"  # Replace with your application's address and port
