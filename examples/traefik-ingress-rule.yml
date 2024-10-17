@@ -29,5 +29,24 @@ spec:
     - name: prom-label-proxy
       namespace: monitoring
       port: 8080
+  - kind: Rule
+    match: Headers(`X-Forwarded-Host`, `7a5e7bcc-4a03-4210-b613-74dde2c57c81.europe-west3-0.gcp.staging-cloud.qdrant.io:6333`) && Path(`/sys_metrics`)
+    middlewares:
+    - name: auth
+      namespace: kube-system
+    services:
+    - name: prom-label-proxy
+      namespace: monitoring
+      port: 8080
+  - kind: Rule
+    match: Headers(`host`, `7a5e7bcc-4a03-4210-b613-74dde2c57c81.europe-west3-0.gcp.staging-cloud.qdrant.io:6333`) && Path(`/sys_metrics`)
+    middlewares:
+    - name: auth
+      namespace: kube-system
+    services:
+    - name: prom-label-proxy
+      namespace: monitoring
+      port: 8080
+
   tls:
     secretName: europe-west3-0-wildcard-cert
