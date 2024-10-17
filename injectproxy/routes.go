@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -204,6 +205,7 @@ type ExtractLabeler interface {
 type HTTPFormEnforcer struct {
 	ParameterName string
 	ValueRegexp   string
+	ResultFString string
 }
 
 // ExtractLabel implements the ExtractLabeler interface.
@@ -249,7 +251,7 @@ func (hff HTTPFormEnforcer) getLabelValues(r *http.Request) ([]string, error) {
 	formValues := removeEmptyValues(r.Form[hff.ParameterName])
 
 	if hff.ValueRegexp != "" {
-		formValues = parseValues(formValues, hff.ValueRegexp)
+		formValues = parseValues(formValues, hff.ValueRegexp, hff.ResultFString)
 	}
 
 	if len(formValues) == 0 {
@@ -264,6 +266,7 @@ type HTTPHeaderEnforcer struct {
 	Name            string
 	ParseListSyntax bool
 	ValueRegexp     string
+	ResultFString   string
 }
 
 // ExtractLabel implements the ExtractLabeler interface.
@@ -282,15 +285,21 @@ func (hhe HTTPHeaderEnforcer) ExtractLabel(next http.HandlerFunc) http.Handler {
 func (hhe HTTPHeaderEnforcer) getLabelValues(r *http.Request) ([]string, error) {
 	headerValues := r.Header[hhe.Name]
 
+	slog.Debug("getLabelValues", "headerValues", headerValues)
+
 	if hhe.ParseListSyntax {
 		headerValues = trimValues(splitValues(headerValues, ","))
 	}
 
 	headerValues = removeEmptyValues(headerValues)
 
+	slog.Debug("getLabelValues", "ValueRegexp", hhe.ValueRegexp)
+
 	if hhe.ValueRegexp != "" {
-		headerValues = parseValues(headerValues, hhe.ValueRegexp)
+		headerValues = parseValues(headerValues, hhe.ValueRegexp, hhe.ResultFString)
 	}
+
+	slog.Debug("getLabelValues", "headerValues", headerValues)
 
 	if len(headerValues) == 0 {
 		return nil, fmt.Errorf("missing HTTP header %q", hhe.Name)
@@ -299,7 +308,7 @@ func (hhe HTTPHeaderEnforcer) getLabelValues(r *http.Request) ([]string, error) 
 	return headerValues, nil
 }
 
-// StaticLabelEnforcer enforces a static label value.
+// StaticLabelEnforcer enforces a static label value., ResultFString
 type StaticLabelEnforcer []string
 
 // ExtractLabel implements the ExtractLabeler interface.
@@ -768,7 +777,9 @@ func splitValues(slice []string, sep string) []string {
 	return slice
 }
 
-func parseValues(slice []string, pattern string) []string {
+func parseValues(slice []string, pattern string, fstring string) []string {
+
+	slog.Debug("parseValues", "slice", slice, "pattern", pattern)
 
 	result := []string{}
 
@@ -780,8 +791,16 @@ func parseValues(slice []string, pattern string) []string {
 	for i := 0; i < len(slice); i++ {
 
 		matches := re.FindStringSubmatch(slice[i])
+
+		slog.Debug("parseValues", "slice", slice[i], "matches", matches)
+
+		word := matches[1]
+		if fstring != "" {
+			word = fmt.Sprintf(fstring, matches[1])
+		}
+
 		if len(matches) > 1 {
-			result = append(result, matches[1])
+			result = append(result, word)
 
 		}
 	}

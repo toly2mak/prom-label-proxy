@@ -19,6 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -53,6 +54,42 @@ func (i *arrayFlags) Set(value string) error {
 	return nil
 }
 
+func initLogger() {
+
+	// Get the log level from the environment variable, default to "INFO"
+	logLevelStr := os.Getenv("LOGLEVEL")
+	if logLevelStr == "" {
+		logLevelStr = "INFO"
+	}
+
+	var level slog.Level
+
+	// Convert the string to a slog.Level
+	switch strings.ToUpper(logLevelStr) {
+	case "DEBUG":
+		level = slog.LevelDebug
+	case "INFO":
+		level = slog.LevelInfo
+	case "WARN":
+		level = slog.LevelWarn
+	case "ERROR":
+		level = slog.LevelError
+	default:
+		level = slog.LevelInfo // Default level
+	}
+
+	opts := &slog.HandlerOptions{
+		Level: level,
+	}
+
+	// Create a logger with the specified log level
+	handler := slog.NewTextHandler(os.Stdout, opts)
+	logger := slog.New(handler)
+
+	// Set the logger as the default logger
+	slog.SetDefault(logger)
+}
+
 func main() {
 	var (
 		insecureListenAddress  string
@@ -70,6 +107,7 @@ func main() {
 		rulesWithActiveAlerts  bool
 		onlyMetrics            bool
 		valueRegexp            string
+		resultFString          string
 	)
 
 	flagset := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
@@ -92,6 +130,9 @@ func main() {
 	flagset.BoolVar(&rulesWithActiveAlerts, "rules-with-active-alerts", false, "When true, the proxy will return alerting rules with active alerts matching the tenant label even when the tenant label isn't present in the rule's labels.")
 	flagset.BoolVar(&onlyMetrics, "only-metrics", true, "When true, the proxy will serve only metrics endpoint.")
 	flagset.StringVar(&valueRegexp, "value-regexp", "", "Regexp to extract label's value from requests.")
+	flagset.StringVar(&resultFString, "result-fstring", "", "Format string to wrap label's value to inject.")
+
+	initLogger()
 
 	//nolint: errcheck // Parse() will exit on error.
 	flagset.Parse(os.Args[1:])
@@ -169,14 +210,18 @@ func main() {
 	}
 
 	var extractLabeler injectproxy.ExtractLabeler
+
+	slog.Debug("Check ValueRegexp", "regexp", valueRegexp)
+	slog.Debug("Check resultFString", "fstring", resultFString)
+
 	switch {
 	case len(labelValues) > 0:
 		extractLabeler = injectproxy.StaticLabelEnforcer(labelValues)
 	case queryParam != "":
-		extractLabeler = injectproxy.HTTPFormEnforcer{ParameterName: queryParam, ValueRegexp: valueRegexp}
+		extractLabeler = injectproxy.HTTPFormEnforcer{ParameterName: queryParam, ValueRegexp: valueRegexp, ResultFString: resultFString}
 	case headerName != "":
 		extractLabeler = injectproxy.HTTPHeaderEnforcer{Name: http.CanonicalHeaderKey(headerName),
-			ParseListSyntax: headerUsesListSyntax, ValueRegexp: valueRegexp}
+			ParseListSyntax: headerUsesListSyntax, ValueRegexp: valueRegexp, ResultFString: resultFString}
 	}
 
 	var g run.Group

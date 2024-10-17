@@ -172,7 +172,7 @@ func TestParseValues(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := parseValues(test.url, test.pattern)
+		result := parseValues(test.url, test.pattern, "%s")
 		if !reflect.DeepEqual(result, test.expected) {
 			t.Errorf("For URL %q and pattern %q, expected %q but got %q", test.url, test.pattern, test.expected, result)
 		}
