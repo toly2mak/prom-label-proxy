@@ -14,6 +14,7 @@
 package injectproxy
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -27,6 +28,9 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"crypto/sha256"
+	"encoding/hex"
 
 	"github.com/efficientgo/core/merrors"
 	"github.com/metalmatze/signal/server/signalhttp"
@@ -274,6 +278,43 @@ type HTTPHeaderEnforcer struct {
 	ParseListSyntax bool
 	ValueRegexp     string
 	ResultFString   string
+	Cache           *Cache
+}
+
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
+	body       *bytes.Buffer
+}
+
+func newResponseWriter(w http.ResponseWriter) *responseWriter {
+	return &responseWriter{
+		ResponseWriter: w,
+		statusCode:     http.StatusOK, // Default status code
+		body:           &bytes.Buffer{},
+	}
+}
+
+// Override the WriteHeader method to capture the status code
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+
+// Override the Write method to capture the response body
+func (rw *responseWriter) Write(b []byte) (int, error) {
+	rw.body.Write(b)
+	return rw.ResponseWriter.Write(b)
+}
+
+func generateCacheKey(labelValues []string) string {
+	// Join the label values into a single string
+	joinedValues := strings.Join(labelValues, ",")
+
+	// Hash the joined string to create a unique key
+	hash := sha256.New()
+	hash.Write([]byte(joinedValues))
+	return hex.EncodeToString(hash.Sum(nil))
 }
 
 // ExtractLabel implements the ExtractLabeler interface.
@@ -285,7 +326,21 @@ func (hhe HTTPHeaderEnforcer) ExtractLabel(next http.HandlerFunc) http.Handler {
 			return
 		}
 
-		next.ServeHTTP(w, r.WithContext(WithLabelValues(r.Context(), labelValues)))
+		cacheKey := generateCacheKey(labelValues)
+
+		// Check cache and return or redirect to prometheus
+		if prometheusCacheAPIResponse(w, cacheKey, hhe.Cache) == nil {
+			return
+		}
+
+		rw := newResponseWriter(w)
+		next.ServeHTTP(rw, r.WithContext(WithLabelValues(r.Context(), labelValues)))
+
+		// Write the response to the cache
+		if rw.statusCode == http.StatusOK {
+			hhe.Cache.Set(cacheKey, rw.body.Bytes())
+		}
+
 	})
 }
 
@@ -318,7 +373,7 @@ func (hhe HTTPHeaderEnforcer) getLabelValues(r *http.Request) ([]string, error) 
 // StaticLabelEnforcer enforces a static label value., ResultFString
 type StaticLabelEnforcer []string
 
-// ExtractLabel implements the ExtractLabeler interface.
+// the ExtractLabeler interface.
 func (sle StaticLabelEnforcer) ExtractLabel(next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		next(w, r.WithContext(WithLabelValues(r.Context(), sle)))

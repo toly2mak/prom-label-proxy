@@ -1293,7 +1293,7 @@ func TestQuery(t *testing.T) {
 				if len(tc.staticLabelVal) > 0 {
 					labelEnforcer = StaticLabelEnforcer(tc.staticLabelVal)
 				} else if tc.headerName != "" {
-					labelEnforcer = HTTPHeaderEnforcer{Name: tc.headerName, ParseListSyntax: tc.headerUsesListSyntax}
+					labelEnforcer = HTTPHeaderEnforcer{Name: tc.headerName, ParseListSyntax: tc.headerUsesListSyntax, Cache: NewCache(5 * time.Second)}
 				} else if tc.queryParam != "" {
 					labelEnforcer = HTTPFormEnforcer{ParameterName: tc.queryParam}
 				} else {

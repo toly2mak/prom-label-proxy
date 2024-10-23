@@ -27,6 +27,7 @@ import (
 	"regexp"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/metalmatze/signal/internalserver"
 	"github.com/oklog/run"
@@ -109,6 +110,7 @@ func main() {
 		valueRegexp            string
 		resultFString          string
 		rewriteMetricsPath     string
+		cacheTTL               int
 	)
 
 	flagset := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
@@ -133,6 +135,7 @@ func main() {
 	flagset.StringVar(&valueRegexp, "value-regexp", "", "Regexp to extract label's value from requests.")
 	flagset.StringVar(&resultFString, "result-fstring", "", "Format string to wrap label's value to inject.")
 	flagset.StringVar(&rewriteMetricsPath, "rewrite-metrics-path", "", "Rewrite /metrics path to custom endpoint.")
+	flagset.IntVar(&cacheTTL, "cache-ttl", 15, "Cache TTL")
 
 	initLogger()
 
@@ -225,7 +228,8 @@ func main() {
 		extractLabeler = injectproxy.HTTPFormEnforcer{ParameterName: queryParam, ValueRegexp: valueRegexp, ResultFString: resultFString}
 	case headerName != "":
 		extractLabeler = injectproxy.HTTPHeaderEnforcer{Name: http.CanonicalHeaderKey(headerName),
-			ParseListSyntax: headerUsesListSyntax, ValueRegexp: valueRegexp, ResultFString: resultFString}
+			ParseListSyntax: headerUsesListSyntax, ValueRegexp: valueRegexp, ResultFString: resultFString,
+			Cache: injectproxy.NewCache(time.Duration(cacheTTL) * time.Second)}
 	}
 
 	var g run.Group
