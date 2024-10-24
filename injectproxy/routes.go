@@ -279,6 +279,7 @@ type HTTPHeaderEnforcer struct {
 	ValueRegexp     string
 	ResultFString   string
 	Cache           *Cache
+	MetricsNames    []string
 }
 
 type responseWriter struct {
@@ -303,8 +304,10 @@ func (rw *responseWriter) WriteHeader(code int) {
 
 // Override the Write method to capture the response body
 func (rw *responseWriter) Write(b []byte) (int, error) {
-	rw.body.Write(b)
-	return rw.ResponseWriter.Write(b)
+
+	return rw.body.Write(b)
+	//return // rw.ResponseWriter.Write(b)
+
 }
 
 func generateCacheKey(labelValues []string) string {
@@ -315,6 +318,52 @@ func generateCacheKey(labelValues []string) string {
 	hash := sha256.New()
 	hash.Write([]byte(joinedValues))
 	return hex.EncodeToString(hash.Sum(nil))
+}
+
+func trimMetricsByNames(data []byte, metricNames []string) ([]byte, error) {
+
+	lines := strings.Split(string(data), "\n")
+
+	var filteredMetrics bytes.Buffer
+
+	// Create a map for quick lookup of metric names
+	metricMap := make(map[string]struct{})
+	for _, name := range metricNames {
+		metricMap[name] = struct{}{}
+	}
+
+	isNext := false
+	for _, line := range lines {
+		if len(line) == 0 {
+			continue // Skip empty lines
+		}
+
+		// Check if the line starts with a metric type or metric name
+		if strings.HasPrefix(line, "# TYPE") {
+
+			parts := strings.Fields(line)
+
+			if len(parts) > 1 {
+				metricName := parts[2]
+				if _, ok := metricMap[metricName]; ok {
+					filteredMetrics.WriteString(line + "\n")
+					isNext = true
+				} else {
+					isNext = false
+				}
+			} else {
+
+				isNext = false
+			}
+		} else {
+			if isNext {
+				filteredMetrics.WriteString(line + "\n")
+			}
+		}
+
+	}
+
+	return filteredMetrics.Bytes(), nil
 }
 
 // ExtractLabel implements the ExtractLabeler interface.
@@ -336,9 +385,25 @@ func (hhe HTTPHeaderEnforcer) ExtractLabel(next http.HandlerFunc) http.Handler {
 		rw := newResponseWriter(w)
 		next.ServeHTTP(rw, r.WithContext(WithLabelValues(r.Context(), labelValues)))
 
+		// trim reponse by labels list
 		// Write the response to the cache
 		if rw.statusCode == http.StatusOK {
-			hhe.Cache.Set(cacheKey, rw.body.Bytes())
+
+			body := rw.body.Bytes()
+
+			// If MetricsNames provided then trim it
+			if len(hhe.MetricsNames) > 0 && r.URL.Path == "/federate" {
+
+				body, err = trimMetricsByNames(rw.body.Bytes(), hhe.MetricsNames)
+				if err != nil {
+					prometheusAPIError(w, humanFriendlyErrorMessage(err), http.StatusBadRequest)
+					return
+				}
+			}
+
+			if _, err := rw.ResponseWriter.Write(body); err == nil {
+				hhe.Cache.Set(cacheKey, body)
+			}
 		}
 
 	})

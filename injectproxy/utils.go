@@ -16,12 +16,40 @@ package injectproxy
 import (
 	"encoding/json"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"log"
 	"log/slog"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
+
+type MetricsConfig struct {
+	Items []string `yaml:"metrics"`
+}
+
+func ParseMetricsConfig(path string) []string {
+
+	if path == "" {
+		return []string{}
+	}
+
+	// Read the YAML file
+	data, err := os.ReadFile(path)
+	if err != nil {
+		log.Fatalf("error parse config: %v", err)
+	}
+
+	// Unmarshal the YAML data into the Config struct
+	var config MetricsConfig
+	err = yaml.Unmarshal(data, &config)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
+
+	return config.Items
+}
 
 func prometheusAPIError(w http.ResponseWriter, errorMessage string, code int) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
