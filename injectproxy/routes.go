@@ -280,6 +280,7 @@ type HTTPHeaderEnforcer struct {
 	ResultFString   string
 	Cache           *Cache
 	MetricsNames    []string
+	RewritePath     string
 }
 
 type responseWriter struct {
@@ -331,6 +332,8 @@ func trimMetricsByNames(data []byte, metricNames []string) ([]byte, error) {
 	for _, name := range metricNames {
 		metricMap[name] = struct{}{}
 	}
+
+	// slog.Debug("trimMetricsByNames", "metricMap", metricMap)
 
 	isNext := false
 	for _, line := range lines {
@@ -391,8 +394,9 @@ func (hhe HTTPHeaderEnforcer) ExtractLabel(next http.HandlerFunc) http.Handler {
 
 			body := rw.body.Bytes()
 
+			slog.Debug("filter by defined metrics", "list", hhe.MetricsNames, "path", r.URL.Path)
 			// If MetricsNames provided then trim it
-			if len(hhe.MetricsNames) > 0 && r.URL.Path == "/federate" {
+			if len(hhe.MetricsNames) > 0 && r.URL.Path == hhe.RewritePath {
 
 				body, err = trimMetricsByNames(rw.body.Bytes(), hhe.MetricsNames)
 				if err != nil {
@@ -482,15 +486,10 @@ func NewRoutes(upstream *url.URL, label string, extractLabeler ExtractLabeler, o
 	}
 	mux := newStrictMux(newInstrumentedMux(http.NewServeMux(), opt.registerer))
 
-	mpath := "/metrics"
-	if opt.rewriteMetricsPath != "" {
-		mpath = opt.rewriteMetricsPath
-	}
-
-	slog.Debug("Expose API", "path for metrics", mpath)
+	slog.Debug("Expose API", "path for metrics", opt.rewriteMetricsPath)
 
 	errs := merrors.New(
-		mux.Handle(mpath, r.el.ExtractLabel(enforceMethods(r.matcher, "GET"))),
+		mux.Handle(GetMetricsPath(opt.rewriteMetricsPath), r.el.ExtractLabel(enforceMethods(r.matcher, "GET"))),
 	)
 
 	slog.Info("Expose API", "onlyMetrics", opt.onlyMetrics)

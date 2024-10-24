@@ -10,5 +10,6 @@ LOGLEVEL=DEBUG ./prom-label-proxy \
    --result-fstring 'qdrant-%s.+' \
    --upstream https://prometheus-monitoring.eu-central-1-0.aws.staging-cloud.qdrant.io \
    --rewrite-metrics-path '/sys_metrics' \
-   --cache-ttl 5 \
+   --metrics-cache-ttl 5 \
+   --metrics-config-path examples/exposed_metrics.yaml \
    --insecure-listen-address 127.0.0.1:8080

@@ -29,6 +29,16 @@ type MetricsConfig struct {
 	Items []string `yaml:"metrics"`
 }
 
+func GetMetricsPath(rewriteMetricsPath string) string {
+
+	mpath := "/metrics"
+	if rewriteMetricsPath != "" {
+		mpath = rewriteMetricsPath
+	}
+	return mpath
+
+}
+
 func ParseMetricsConfig(path string) []string {
 
 	if path == "" {

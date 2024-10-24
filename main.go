@@ -235,6 +235,8 @@ func main() {
 
 		metricsNames := injectproxy.ParseMetricsConfig(metricConfigPath)
 
+		slog.Debug("List of defined metrics:", metricConfigPath, metricsNames)
+
 		extractLabeler = injectproxy.HTTPHeaderEnforcer{
 			Name:            http.CanonicalHeaderKey(headerName),
 			ParseListSyntax: headerUsesListSyntax,
@@ -242,6 +244,7 @@ func main() {
 			ResultFString:   resultFString,
 			Cache:           injectproxy.NewCache(time.Duration(cacheTTL) * time.Second),
 			MetricsNames:    metricsNames,
+			RewritePath:     injectproxy.GetMetricsPath(rewriteMetricsPath),
 		}
 	}
 
